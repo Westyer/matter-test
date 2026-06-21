@@ -3,11 +3,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-PRODUCT_HUNT_TOKEN = os.getenv("PRODUCT_HUNT_TOKEN", "")
-TWITTER_USERNAME   = os.getenv("TWITTER_USERNAME", "")
-TWITTER_PASSWORD   = os.getenv("TWITTER_PASSWORD", "")
-LINKEDIN_EMAIL     = os.getenv("LINKEDIN_EMAIL", "")
-LINKEDIN_PASSWORD  = os.getenv("LINKEDIN_PASSWORD", "")
+PRODUCT_HUNT_TOKEN   = os.getenv("PRODUCT_HUNT_TOKEN", "")
+TWITTER_CLIENT_ID    = os.getenv("TWITTER_CLIENT_ID", "")
+TWITTER_CLIENT_SECRET = os.getenv("TWITTER_CLIENT_SECRET", "")
 
 TARGET_TITLES = [
     "ceo", "chief executive officer",

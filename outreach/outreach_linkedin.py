@@ -1,19 +1,19 @@
 from playwright.sync_api import Page
-from config import LINKEDIN_EMAIL, LINKEDIN_PASSWORD, LINKEDIN_MESSAGE
+from config import LINKEDIN_MESSAGE
 
 
 def login_linkedin(page: Page):
+    """Open LinkedIn and wait for the user to log in manually in the browser."""
     page.goto("https://www.linkedin.com/login", wait_until="domcontentloaded")
-    page.wait_for_timeout(2000)
+    page.wait_for_timeout(1500)
 
     if "/feed" in page.url or "/mynetwork" in page.url:
-        return  # session already active
+        return  # already logged in from saved session
 
-    page.fill("#username", LINKEDIN_EMAIL)
-    page.fill("#password", LINKEDIN_PASSWORD)
-    page.click('button[type="submit"]')
-    page.wait_for_url("**/feed/**", timeout=30000)
-    page.wait_for_timeout(1500)
+    print("  LinkedIn: Please log in in the browser window that just opened.")
+    print("  Waiting up to 2 minutes for you to complete login...")
+    page.wait_for_url("**/feed/**", timeout=120000)
+    print("  LinkedIn login detected — session saved for next run.")
 
 
 def find_linkedin_url(page: Page, ph_profile_url: str) -> str | None:
@@ -24,7 +24,7 @@ def find_linkedin_url(page: Page, ph_profile_url: str) -> str | None:
     for anchor in page.query_selector_all("a[href*='linkedin.com']"):
         href = anchor.get_attribute("href") or ""
         if "linkedin.com/in/" in href:
-            return href.split("?")[0]  # strip tracking params
+            return href.split("?")[0]
     return None
 
 
@@ -39,7 +39,6 @@ def send_linkedin_message(page: Page, linkedin_url: str, maker: dict) -> bool:
     page.goto(linkedin_url, wait_until="domcontentloaded")
     page.wait_for_timeout(2500)
 
-    # "Message" button exists only for 1st-degree connections
     msg_btn = (
         page.query_selector('button[aria-label^="Message"]')
         or page.query_selector('a[aria-label^="Message"]')
@@ -51,7 +50,6 @@ def send_linkedin_message(page: Page, linkedin_url: str, maker: dict) -> bool:
     msg_btn.click()
     page.wait_for_timeout(2000)
 
-    # Message compose box
     composer = (
         page.query_selector(".msg-form__contenteditable")
         or page.query_selector('[role="textbox"][aria-label*="message"]')
