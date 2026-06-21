@@ -1,5 +1,5 @@
 from playwright.sync_api import Page
-from config import LINKEDIN_MESSAGE
+from config import MESSAGE
 
 
 def login_linkedin(page: Page):
@@ -30,11 +30,7 @@ def find_linkedin_url(page: Page, ph_profile_url: str) -> str | None:
 
 def send_linkedin_message(page: Page, linkedin_url: str, maker: dict) -> bool:
     first_name = maker["maker_name"].split()[0]
-    message = LINKEDIN_MESSAGE.format(
-        first_name=first_name,
-        product_name=maker["product_name"],
-        rank=maker["product_rank"],
-    )
+    message = MESSAGE.format(first_name=first_name)
 
     page.goto(linkedin_url, wait_until="domcontentloaded")
     page.wait_for_timeout(2500)

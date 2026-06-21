@@ -1,5 +1,5 @@
 from playwright.sync_api import Page
-from config import TWITTER_MESSAGE
+from config import MESSAGE
 
 
 def login_twitter(page: Page):
@@ -18,11 +18,7 @@ def login_twitter(page: Page):
 
 def send_dm(page: Page, twitter_username: str, maker: dict) -> bool:
     first_name = maker["maker_name"].split()[0]
-    message = TWITTER_MESSAGE.format(
-        first_name=first_name,
-        product_name=maker["product_name"],
-        rank=maker["product_rank"],
-    )
+    message = MESSAGE.format(first_name=first_name)
 
     page.goto(f"https://x.com/{twitter_username}", wait_until="domcontentloaded")
     page.wait_for_timeout(2500)

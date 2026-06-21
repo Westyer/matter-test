@@ -11,17 +11,11 @@ TARGET_TITLES = [
     "co-founder", "cofounder", "founder",
 ]
 
-TWITTER_MESSAGE = (
-    "Hey {first_name} 👋 Saw {product_name} hit #{rank} on Product Hunt today — "
-    "congrats on the launch! Always love seeing what founders are shipping. "
-    "Would love to connect and swap notes if you're open to it."
-)
-
-LINKEDIN_MESSAGE = (
+MESSAGE = (
     "Hi {first_name},\n\n"
-    "Saw {product_name} trending on Product Hunt today — impressive launch!\n\n"
-    "I'm always looking to connect with founders and product leaders building "
-    "interesting things. Would love to learn more about what you're working on "
-    "and see if there's a way we can be useful to each other.\n\n"
-    "Open to a quick chat?"
+    "Congrats on the recent PH launch and cracking top 10 🎉 Curious how that's "
+    "translating into revenue, and what else you're stacking on top of it to keep things rolling.\n\n"
+    "We've been talking to founders who are Miro, PayPal, Nvidia, and Higgsfield alums, among others. "
+    "Happy to send over a playbook of their best hacks once it's all done, as a thanks for sharing yours.\n\n"
+    "Open to a quick 20-min call sometime?"
 )
