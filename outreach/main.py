@@ -40,7 +40,7 @@ def run():
     print()
 
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=False)
+        browser = p.chromium.launch(headless=False, channel="chrome")
 
         # ── Twitter ───────────────────────────────────────────────────────────
         twitter_targets = [t for t in targets if t.get("twitter_username")]
