@@ -1,21 +1,21 @@
 #!/usr/bin/env python3
 """
-Product Hunt outreach script.
-Fetches today's top 10 PH products, finds CEO/CPO/Founder makers,
-and sends them a message on Twitter and LinkedIn.
-Both platforms use persistent Chrome profiles — log in once, reused after.
+Fetches today's top 10 Product Hunt products, finds CEO/CPO/Founder makers,
+scrapes their Twitter and LinkedIn profiles, and exports to an Excel file.
 """
 import sys
+import time
+from datetime import date
 from pathlib import Path
-from playwright.sync_api import sync_playwright
 
-from config import PRODUCT_HUNT_CLIENT_ID, PRODUCT_HUNT_CLIENT_SECRET
+import requests
+from bs4 import BeautifulSoup
+import openpyxl
+from openpyxl.styles import Font, PatternFill, Alignment
+from openpyxl.utils import get_column_letter
+
+from config import PRODUCT_HUNT_CLIENT_ID, PRODUCT_HUNT_CLIENT_SECRET, MESSAGE
 from product_hunt import get_top_products, filter_target_makers
-from session_manager import load_sent_log, save_sent_log
-from outreach_twitter import login_twitter, send_dm
-from outreach_linkedin import login_linkedin, find_linkedin_url, send_linkedin_message
-
-PROFILES_DIR = Path(__file__).parent / "sessions"
 
 
 def validate_config():
@@ -24,9 +24,87 @@ def validate_config():
         sys.exit(1)
 
 
+def get_linkedin_from_ph(username: str) -> str:
+    """Scrape the maker's Product Hunt profile for a LinkedIn link."""
+    try:
+        url = f"https://www.producthunt.com/@{username}"
+        resp = requests.get(
+            url,
+            headers={"User-Agent": "Mozilla/5.0"},
+            timeout=10,
+        )
+        if resp.status_code != 200:
+            return ""
+        soup = BeautifulSoup(resp.text, "html.parser")
+        for a in soup.find_all("a", href=True):
+            href = a["href"]
+            if "linkedin.com/in/" in href:
+                return href.split("?")[0]
+    except Exception:
+        pass
+    return ""
+
+
+def build_excel(targets: list, output_path: Path):
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "PH Outreach"
+
+    # Header style
+    header_fill = PatternFill("solid", fgColor="1A1A2E")
+    header_font = Font(color="FFFFFF", bold=True, size=11)
+
+    headers = ["#", "Product", "Maker", "Title", "Twitter", "LinkedIn", "PH Profile", "Message"]
+    col_widths = [4, 22, 20, 28, 28, 40, 32, 60]
+
+    for col, (header, width) in enumerate(zip(headers, col_widths), start=1):
+        cell = ws.cell(row=1, column=col, value=header)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+        ws.column_dimensions[get_column_letter(col)].width = width
+
+    ws.row_dimensions[1].height = 22
+
+    # Row style alternating
+    fill_even = PatternFill("solid", fgColor="F5F5F5")
+
+    for row_idx, t in enumerate(targets, start=2):
+        fill = fill_even if row_idx % 2 == 0 else None
+
+        twitter_url = (
+            f"https://x.com/{t['twitter_username']}" if t.get("twitter_username") else ""
+        )
+        first_name = t["maker_name"].split()[0]
+        message = MESSAGE.format(first_name=first_name)
+
+        values = [
+            t["product_rank"],
+            t["product_name"],
+            t["maker_name"],
+            t["headline"],
+            twitter_url,
+            t.get("linkedin_url", ""),
+            t["ph_profile_url"],
+            message,
+        ]
+
+        for col, value in enumerate(values, start=1):
+            cell = ws.cell(row=row_idx, column=col, value=value)
+            cell.alignment = Alignment(wrap_text=(col == len(headers)), vertical="top")
+            if fill:
+                cell.fill = fill
+
+        ws.row_dimensions[row_idx].height = 80 if t.get("linkedin_url") else 40
+
+    # Freeze header row
+    ws.freeze_panes = "A2"
+
+    wb.save(output_path)
+
+
 def run():
     validate_config()
-    sent_log = load_sent_log()
 
     print("Fetching today's top 10 Product Hunt products...")
     products = get_top_products()
@@ -40,79 +118,20 @@ def run():
     print(f"Found {len(targets)} target maker(s):\n")
     for t in targets:
         print(f"  #{t['product_rank']} {t['product_name']} — {t['maker_name']} ({t['headline']})")
-    print()
 
-    with sync_playwright() as p:
-
-        # ── Twitter ───────────────────────────────────────────────────────────
-        twitter_targets = [t for t in targets if t.get("twitter_username")]
-        print(f"=== Twitter ({len(twitter_targets)} targets) ===")
-
-        if twitter_targets:
-            tw_profile = PROFILES_DIR / "chrome_twitter"
-            tw_profile.mkdir(parents=True, exist_ok=True)
-            tw_ctx = p.chromium.launch_persistent_context(
-                str(tw_profile),
-                channel="chrome",
-                headless=False,
-                args=["--disable-blink-features=AutomationControlled"],
-                ignore_default_args=["--enable-automation"],
-            )
-            tw_page = tw_ctx.new_page()
-            login_twitter(tw_page)
-
-            for maker in twitter_targets:
-                handle = maker["twitter_username"]
-                key = f"twitter:{handle}"
-                if key in sent_log:
-                    print(f"  ↩  @{handle} already messaged, skipping")
-                    continue
-                print(f"  → DM to @{handle} ({maker['maker_name']}) re: {maker['product_name']} ...")
-                if send_dm(tw_page, handle, maker):
-                    sent_log.add(key)
-                    save_sent_log(sent_log)
-                    print("     ✓ sent")
-
-            tw_ctx.close()
+    print("\nScraping LinkedIn profiles from Product Hunt...")
+    for t in targets:
+        print(f"  Checking @{t['maker_username']}...")
+        t["linkedin_url"] = get_linkedin_from_ph(t["maker_username"])
+        if t["linkedin_url"]:
+            print(f"    ✓ {t['linkedin_url']}")
         else:
-            print("  No makers with a Twitter handle found.")
+            print(f"    — no LinkedIn found")
+        time.sleep(0.5)  # be polite to PH servers
 
-        # ── LinkedIn ──────────────────────────────────────────────────────────
-        print(f"\n=== LinkedIn ({len(targets)} targets to check) ===")
-
-        li_profile = PROFILES_DIR / "chrome_linkedin"
-        li_profile.mkdir(parents=True, exist_ok=True)
-        li_ctx = p.chromium.launch_persistent_context(
-            str(li_profile),
-            channel="chrome",
-            headless=False,
-            args=["--disable-blink-features=AutomationControlled"],
-            ignore_default_args=["--enable-automation"],
-        )
-        li_page = li_ctx.new_page()
-        login_linkedin(li_page)
-
-        for maker in targets:
-            print(f"  Checking PH profile for {maker['maker_name']} ...")
-            linkedin_url = find_linkedin_url(li_page, maker["ph_profile_url"])
-            if not linkedin_url:
-                print("    No LinkedIn link found on PH profile")
-                continue
-
-            key = f"linkedin:{linkedin_url}"
-            if key in sent_log:
-                print("    ↩  Already messaged on LinkedIn, skipping")
-                continue
-
-            print(f"    → Message to {maker['maker_name']} re: {maker['product_name']} ...")
-            if send_linkedin_message(li_page, linkedin_url, maker):
-                sent_log.add(key)
-                save_sent_log(sent_log)
-                print("       ✓ sent")
-
-        li_ctx.close()
-
-    print("\nAll done! Results saved to sent_log.json")
+    output = Path(__file__).parent / f"outreach_{date.today()}.xlsx"
+    build_excel(targets, output)
+    print(f"\nExcel saved to: {output}")
 
 
 if __name__ == "__main__":
