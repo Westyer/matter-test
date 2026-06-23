@@ -1,7 +1,7 @@
 import requests
 from datetime import date, timedelta
-from typing import Optional, List, Dict
-from config import PRODUCT_HUNT_TOKEN, TARGET_TITLES
+from typing import Optional, List
+from config import PRODUCT_HUNT_CLIENT_ID, PRODUCT_HUNT_CLIENT_SECRET, TARGET_TITLES
 
 GRAPHQL_ENDPOINT = "https://api.producthunt.com/v2/api/graphql"
 
@@ -29,6 +29,20 @@ query TopPosts($postedAfter: DateTime!, $postedBefore: DateTime!) {
 """
 
 
+def get_access_token() -> str:
+    resp = requests.post(
+        "https://api.producthunt.com/v2/oauth/token",
+        json={
+            "client_id":     PRODUCT_HUNT_CLIENT_ID,
+            "client_secret": PRODUCT_HUNT_CLIENT_SECRET,
+            "grant_type":    "client_credentials",
+        },
+        timeout=15,
+    )
+    resp.raise_for_status()
+    return resp.json()["access_token"]
+
+
 def is_target_title(headline: Optional[str]) -> bool:
     if not headline:
         return False
@@ -37,13 +51,14 @@ def is_target_title(headline: Optional[str]) -> bool:
 
 
 def get_top_products() -> List[dict]:
+    access_token = get_access_token()
     today = date.today()
     variables = {
         "postedAfter":  today.isoformat() + "T00:00:00Z",
         "postedBefore": (today + timedelta(days=1)).isoformat() + "T00:00:00Z",
     }
     headers = {
-        "Authorization": f"Bearer {PRODUCT_HUNT_TOKEN}",
+        "Authorization": f"Bearer {access_token}",
         "Content-Type": "application/json",
         "Accept": "application/json",
     }

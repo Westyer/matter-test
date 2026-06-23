@@ -8,7 +8,7 @@ Both platforms use browser sessions — log in once, reused after.
 import sys
 from playwright.sync_api import sync_playwright
 
-from config import PRODUCT_HUNT_TOKEN
+from config import PRODUCT_HUNT_CLIENT_ID, PRODUCT_HUNT_CLIENT_SECRET
 from product_hunt import get_top_products, filter_target_makers
 from session_manager import get_context, save_context, load_sent_log, save_sent_log
 from outreach_twitter import login_twitter, send_dm
@@ -16,8 +16,8 @@ from outreach_linkedin import login_linkedin, find_linkedin_url, send_linkedin_m
 
 
 def validate_config():
-    if not PRODUCT_HUNT_TOKEN:
-        print("Missing PRODUCT_HUNT_TOKEN in .env")
+    if not PRODUCT_HUNT_CLIENT_ID or not PRODUCT_HUNT_CLIENT_SECRET:
+        print("Missing PRODUCT_HUNT_CLIENT_ID or PRODUCT_HUNT_CLIENT_SECRET in .env")
         sys.exit(1)
 
 

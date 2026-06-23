@@ -3,7 +3,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-PRODUCT_HUNT_TOKEN = os.getenv("PRODUCT_HUNT_TOKEN", "")
+PRODUCT_HUNT_CLIENT_ID     = os.getenv("PRODUCT_HUNT_CLIENT_ID", "")
+PRODUCT_HUNT_CLIENT_SECRET = os.getenv("PRODUCT_HUNT_CLIENT_SECRET", "")
 
 TARGET_TITLES = [
     "ceo", "chief executive officer",
