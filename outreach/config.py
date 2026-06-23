@@ -10,6 +10,9 @@ TARGET_TITLES = [
     "ceo", "chief executive officer",
     "cpo", "chief product officer",
     "co-founder", "cofounder", "founder",
+    "head of growth",
+    "growth product manager",
+    "vp growth", "vp of growth",
 ]
 
 MESSAGE = (
