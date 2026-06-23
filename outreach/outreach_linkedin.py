@@ -1,3 +1,4 @@
+from typing import Optional
 from playwright.sync_api import Page
 from config import MESSAGE
 
@@ -16,7 +17,7 @@ def login_linkedin(page: Page):
     print("  LinkedIn login detected — session saved for next run.")
 
 
-def find_linkedin_url(page: Page, ph_profile_url: str) -> str | None:
+def find_linkedin_url(page: Page, ph_profile_url: str) -> Optional[str]:
     """Visit the maker's Product Hunt profile and extract any LinkedIn link."""
     page.goto(ph_profile_url, wait_until="domcontentloaded")
     page.wait_for_timeout(2000)

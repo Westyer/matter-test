@@ -1,5 +1,6 @@
 import requests
 from datetime import date, timedelta
+from typing import Optional, List, Dict
 from config import PRODUCT_HUNT_TOKEN, TARGET_TITLES
 
 GRAPHQL_ENDPOINT = "https://api.producthunt.com/v2/api/graphql"
@@ -28,14 +29,14 @@ query TopPosts($postedAfter: DateTime!, $postedBefore: DateTime!) {
 """
 
 
-def is_target_title(headline: str | None) -> bool:
+def is_target_title(headline: Optional[str]) -> bool:
     if not headline:
         return False
     h = headline.lower()
     return any(t in h for t in TARGET_TITLES)
 
 
-def get_top_products() -> list[dict]:
+def get_top_products() -> List[dict]:
     today = date.today()
     variables = {
         "postedAfter":  today.isoformat() + "T00:00:00Z",
@@ -66,7 +67,7 @@ def get_top_products() -> list[dict]:
     return products
 
 
-def filter_target_makers(products: list[dict]) -> list[dict]:
+def filter_target_makers(products: List[dict]) -> List[dict]:
     targets = []
     for product in products:
         for maker in product.get("makers", []):
