@@ -50,12 +50,10 @@ def is_target_title(headline: Optional[str]) -> bool:
     return any(t in h for t in TARGET_TITLES)
 
 
-def get_top_products() -> List[dict]:
-    access_token = get_access_token()
-    today = date.today()
+def get_top_products_for_date(access_token: str, day: date) -> List[dict]:
     variables = {
-        "postedAfter":  today.isoformat() + "T00:00:00Z",
-        "postedBefore": (today + timedelta(days=1)).isoformat() + "T00:00:00Z",
+        "postedAfter":  day.isoformat() + "T00:00:00Z",
+        "postedBefore": (day + timedelta(days=1)).isoformat() + "T00:00:00Z",
     }
     headers = {
         "Authorization": f"Bearer {access_token}",
@@ -82,7 +80,11 @@ def get_top_products() -> List[dict]:
     return products
 
 
-def filter_target_makers(products: List[dict]) -> List[dict]:
+def get_top_products() -> List[dict]:
+    return get_top_products_for_date(get_access_token(), date.today())
+
+
+def filter_target_makers(products: List[dict], day: Optional[date] = None) -> List[dict]:
     targets = []
     for product in products:
         for maker in product.get("makers", []):
@@ -90,6 +92,7 @@ def filter_target_makers(products: List[dict]) -> List[dict]:
                 continue
             username = maker.get("username", "")
             targets.append({
+                "date":            day.isoformat() if day else date.today().isoformat(),
                 "product_name":    product["name"],
                 "product_rank":    product["rank"],
                 "maker_name":      maker["name"],
