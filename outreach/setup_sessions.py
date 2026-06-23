@@ -11,40 +11,62 @@ Before running:
 import os
 import sys
 import shutil
+import subprocess
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 
 SESSIONS_DIR = Path(__file__).parent / "sessions"
 
-CHROME_PROFILE = Path(os.path.expanduser(
-    "~/Library/Application Support/Google/Chrome"
-))
+POSSIBLE_CHROME_PATHS = [
+    "~/Library/Application Support/Google/Chrome",
+    "~/Library/Application Support/Google/Chrome Canary",
+    "~/Library/Application Support/BraveSoftware/Brave-Browser",
+    "~/Library/Application Support/Microsoft Edge",
+]
 
 
-def check_chrome_closed():
-    import subprocess
-    result = subprocess.run(
-        ["pgrep", "-x", "Google Chrome"], capture_output=True
-    )
-    if result.returncode == 0:
-        print("Chrome is still running. Please quit Chrome fully (Cmd+Q) and try again.")
-        sys.exit(1)
+def find_chrome_profile() -> Path:
+    for p in POSSIBLE_CHROME_PATHS:
+        base = Path(os.path.expanduser(p))
+        default = base / "Default"
+        if default.exists():
+            print(f"  Found profile: {base}")
+            return base
+        if base.exists():
+            for child in sorted(base.iterdir()):
+                if (child / "Cookies").exists():
+                    print(f"  Found profile: {base}")
+                    return base
+    print("Could not find a Chrome/Brave/Edge profile. Paths checked:")
+    for p in POSSIBLE_CHROME_PATHS:
+        print(f"  {p}")
+    sys.exit(1)
 
 
-def export_platform(platform: str, url: str, logged_in_check: str):
+def check_browser_closed():
+    for name in ["Google Chrome", "Brave Browser", "Microsoft Edge"]:
+        result = subprocess.run(["pgrep", "-x", name], capture_output=True)
+        if result.returncode == 0:
+            print(f"{name} is still running. Please quit it fully (Cmd+Q) and try again.")
+            sys.exit(1)
+
+
+def export_platform(chrome_base: Path, platform: str, url: str, logged_in_url_fragment: str):
     dest = SESSIONS_DIR / f"chrome_{platform}"
+    src = chrome_base / "Default"
+    if not src.exists():
+        src = chrome_base
 
-    # Copy Chrome Default profile to our sessions dir
-    src = CHROME_PROFILE / "Default"
     if dest.exists():
         shutil.rmtree(dest)
-    print(f"  Copying Chrome profile for {platform}...")
+
+    print(f"  Copying profile for {platform}...")
     shutil.copytree(src, dest, ignore=shutil.ignore_patterns(
         "Cache", "Code Cache", "GPUCache", "DawnCache",
         "ShaderCache", "*.log", "CrashpadMetrics*",
     ))
 
-    # Verify the session is active
+    print(f"  Verifying {platform} session...")
     with sync_playwright() as p:
         ctx = p.chromium.launch_persistent_context(
             str(dest), channel="chrome", headless=False
@@ -53,25 +75,26 @@ def export_platform(platform: str, url: str, logged_in_check: str):
         page.goto(url, wait_until="domcontentloaded")
         page.wait_for_timeout(3000)
 
-        if logged_in_check in page.url or page.query_selector(logged_in_check):
-            print(f"  ✓ {platform.capitalize()} session confirmed")
+        if logged_in_url_fragment in page.url:
+            print(f"  ✓ {platform.capitalize()} session active")
         else:
-            print(f"  ✗ Not logged into {platform.capitalize()} in Chrome.")
-            print(f"    Open Chrome, log in at {url}, then re-run this script.")
+            print(f"  ✗ Not logged in to {platform.capitalize()}.")
+            print(f"    Log in at {url} in your browser, then re-run this script.")
 
         ctx.close()
 
 
 if __name__ == "__main__":
-    print("Checking Chrome is closed...")
-    check_chrome_closed()
+    print("Checking browser is closed...")
+    check_browser_closed()
 
+    chrome_base = find_chrome_profile()
     SESSIONS_DIR.mkdir(exist_ok=True)
 
     print("\nExporting Twitter session...")
-    export_platform("twitter", "https://x.com/home", "home")
+    export_platform(chrome_base, "twitter", "https://x.com/home", "home")
 
     print("\nExporting LinkedIn session...")
-    export_platform("linkedin", "https://www.linkedin.com/feed/", "feed")
+    export_platform(chrome_base, "linkedin", "https://www.linkedin.com/feed/", "feed")
 
     print("\nDone! Run python3 main.py to start outreach.")
