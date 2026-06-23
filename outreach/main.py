@@ -55,6 +55,8 @@ def run():
                 str(tw_profile),
                 channel="chrome",
                 headless=False,
+                args=["--disable-blink-features=AutomationControlled"],
+                ignore_default_args=["--enable-automation"],
             )
             tw_page = tw_ctx.new_page()
             login_twitter(tw_page)
@@ -84,6 +86,8 @@ def run():
             str(li_profile),
             channel="chrome",
             headless=False,
+            args=["--disable-blink-features=AutomationControlled"],
+            ignore_default_args=["--enable-automation"],
         )
         li_page = li_ctx.new_page()
         login_linkedin(li_page)

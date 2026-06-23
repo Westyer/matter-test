@@ -69,7 +69,11 @@ def export_platform(chrome_base: Path, platform: str, url: str, logged_in_url_fr
     print(f"  Verifying {platform} session...")
     with sync_playwright() as p:
         ctx = p.chromium.launch_persistent_context(
-            str(dest), channel="chrome", headless=False
+            str(dest),
+            channel="chrome",
+            headless=False,
+            args=["--disable-blink-features=AutomationControlled"],
+            ignore_default_args=["--enable-automation"],
         )
         page = ctx.new_page()
         page.goto(url, wait_until="domcontentloaded")
